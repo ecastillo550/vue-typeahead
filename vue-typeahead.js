@@ -1,6 +1,7 @@
 import Vue from 'vue'
 
 export default {
+  props: ['src'],
   data () {
     return {
       items: [],
@@ -21,7 +22,7 @@ export default {
 
     if (! this.onHit) {
       this.warn('`onHit` method')
-    }
+    }    
   },
 
   computed: {
@@ -50,17 +51,47 @@ export default {
       }
 
       this.loading = true
+      var auxArray = [];
 
-      this.$http.get(this.src, Object.assign({q:this.query}, this.data))
-        .then(function (response) {
-          if (this.query) {
-            var data = response.data
-            data = this.prepareResponseData ? this.prepareResponseData(data) : data
-            this.items = !!this.limit ? data.slice(0, this.limit) : data
-            this.current = -1
-            this.loading = false
+      var self = this;
+      function filter(item) {
+        for (var property in item) {
+          if (item.hasOwnProperty(property)) {
+            if (typeof item[property] === 'string') {
+              if(item[property].match(new RegExp(self.query, 'i'))) {
+                //auxArray.push(item);
+                return true;
+              }
+            } else if(typeof item[property] === 'object'){
+              return filter(item[property]);
+            }
           }
-        }.bind(this))
+        }
+      }
+
+      this.src.filter(function (item) {
+        if(filter(item)){
+          auxArray.push(item);
+        }
+      }.bind(this));
+
+
+      if (this.query) {
+        auxArray = this.prepareResponseData ? this.prepareResponseData(auxArray) : auxArray
+        this.items = !!this.limit ? auxArray.slice(0, this.limit) : auxArray;
+        this.current = -1
+        this.loading = false
+      }
+      // this.$http.get(this.src, Object.assign({q:this.query}, this.data))
+      //   .then(function (response) {
+      //     if (this.query) {
+      //       var data = response.data
+      //       data = this.prepareResponseData ? this.prepareResponseData(data) : data
+      //       this.items = !!this.limit ? data.slice(0, this.limit) : data
+      //       this.current = -1
+      //       this.loading = false
+      //     }
+      //   }.bind(this))
     },
 
     reset () {
@@ -83,6 +114,7 @@ export default {
       if (this.current === -1) return
 
       this.onHit(this.items[this.current])
+
     },
 
     up () {
